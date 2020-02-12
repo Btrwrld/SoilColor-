@@ -88,10 +88,6 @@ def show_image(image, name):
 
 def select_color_space():
 
-    # Capture card name
-    global card_name
-    card_name = input('Enter the card name: ')
-
     # Capture the available color names
     for value in values:
         
@@ -165,6 +161,7 @@ def start(path, save_dir):
 
     # Read all the images
     images = listdir(path)
+    global card_name
 
     # Mark each image
     for im_name in images:
@@ -172,6 +169,9 @@ def start(path, save_dir):
         image = cv2.imread(path + im_name)
         # Remove the extension
         im_name = im_name.split('.')[0]
+        # Set the card name, thanks to the image naming convention
+        # we know the card name always follow the first _
+        card_name = im_name.split('_')[1]
         # Make a blocking show that closes the image when we are done marking
         show_image(image, im_name)
         # Create the gt for the image and reset store data structures
