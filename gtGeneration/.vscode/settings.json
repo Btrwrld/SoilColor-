@@ -1,0 +1,7 @@
+{
+    "python.pythonPath": "/home/erick/pyenv/research/bin/python",
+    "python.linting.pylintArgs": [
+        "--extension-pkg-whitelist=cv2",
+        "--disable=C"
+    ]
+}
