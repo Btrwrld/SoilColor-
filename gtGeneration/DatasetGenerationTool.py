@@ -25,7 +25,25 @@ card_name = ''
 
 # Card values, used for iteration purposes only
 values = ['8', '7', '6', '5', '4', '3', '2.5']
-chromas = ['1', '2', '3', '4 ', '6', '8']
+chromas = ['1', '2', '3', '4', '6', '8']
+
+
+# Resets global variables for safety
+def reset_values():
+
+    global  color_length, next_ref, card_name, ref_center, color_center, pending_colors, values, chromas
+    
+    color_length = 4
+    ref_center = {  'B1' : (0,0),
+                    'D1' : (0,0),
+                    'E1' : (0,0),
+                    'isFinished' : False}
+    next_ref = 'B1'
+    color_center = {}
+    pending_colors = []
+    card_name = ''
+    values = ['8', '7', '6', '5', '4', '3', '2.5']
+    chromas = ['1', '2', '3', '4', '6', '8']
 
 
 # Defines the click behavior on the image 
@@ -39,7 +57,7 @@ def onclick(event):
             global next_ref
             # Update the dictionary
             ref_center[next_ref] = (int(event.xdata), int(event.ydata))
-            
+            print('Selected ' + next_ref + ' in ' + str((int(event.xdata), int(event.ydata))))
             # Update the next reference
             if(next_ref == 'B1'):
                 next_ref = 'D1'
@@ -49,11 +67,13 @@ def onclick(event):
                 ref_center['isFinished'] = True
                 next_ref = 'B1'
 
+
         # Fill the colors
         else:
 
             # If all colors have been saved the close the image
             if(len(pending_colors) == 0):
+                print('Finished, loading next image')
                 plt.close()
 
             else:
@@ -61,8 +81,8 @@ def onclick(event):
                 color = pending_colors.pop(0)
                 # Add it to the collected colors dictionary
                 color_center[color] = (int(event.xdata), int(event.ydata))
-
-        print((int(event.xdata), int(event.ydata)))
+                print('Adding color ' + color + ' in ' + str((int(event.xdata), int(event.ydata))))
+        
 
 # Draws the image
 def show_image(image, name):
@@ -107,7 +127,6 @@ def select_color_space():
 
 def create_dataset(image, name, save_dir):
 
-    print(ref_center)
 
     # Get the reference points 
     refB1 = image[  ref_center['B1'][1] - color_length : ref_center['B1'][1] + color_length,
@@ -129,8 +148,7 @@ def create_dataset(image, name, save_dir):
     x = [ref_center['B1'][0], ref_center['D1'][0], ref_center['E1'][0]]
     y = [ref_center['B1'][1], ref_center['D1'][1], ref_center['E1'][1]]
     colors = ['B1', 'D1', 'E1'] + list(color_center.keys())
-    print(colors)
-    print(len(colors))
+
 
     # For each marked color
     for color in color_center.keys():
@@ -155,20 +173,57 @@ def create_dataset(image, name, save_dir):
             w.writerow(row)
 
 
+def remove_marked_images(images, marked_images):
+
+    total_images = len(images)
+    pending_removal = []
+    # Remove images that we already marked
+    for i in range(total_images):
+        # Flag to check if the image has been marked
+        isMarked = False
+        # Remove the extension
+        im_name = images[i].split('jpg')[0][:-1]
+        print('Looking for ' + im_name)
+        for data in marked_images:
+            # If the image is present then set the flag
+            if(im_name in data):
+                isMarked = True
+                break
+
+        # If the flag is set, the image has been marked, 
+        # put it on the removal list
+        if(isMarked):
+            pending_removal.append(i)
+            print('Present')
+
+    # Remove the images
+    for i in pending_removal[::-1]:
+        images.pop(i)
+
+
+    print('Removed ' + str(len(pending_removal)) + ' of ' + str(total_images) + ', ' + str(len(images)) + ' remaining')
+
+    return images
+
 
 
 def start(path, save_dir):
 
-    # Read all the images
-    images = listdir(path)
     global card_name
 
+    # Read all the images and remove the ones we already marked
+    images = remove_marked_images(listdir(path), listdir(save_dir))
+    
     # Mark each image
     for im_name in images:
+        print(50*'-')
+        # Reset values for safety
+        reset_values()
         # Read the image 
         image = cv2.imread(path + im_name)
         # Remove the extension
-        im_name = im_name.split('.')[0]
+        im_name = im_name.split('jpg')[0][:-1]
+        print('Working on image ' + im_name)
         # Set the card name, thanks to the image naming convention
         # we know the card name always follow the first _
         card_name = im_name.split('_')[1]
@@ -176,6 +231,7 @@ def start(path, save_dir):
         show_image(image, im_name)
         # Create the gt for the image and reset store data structures
         create_dataset(image, im_name, save_dir)
+        
 
 
 
@@ -188,7 +244,12 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color gt generetion tool' + 10*'-')
     # Ask for the images path
-    path = input('Insert image folder path: ')
-    save_dir = input('Insert image save path: ')
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_base/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/'
+    print('USING DEFUALT VALUES OF PATH AND SAVE')
+    # TODO:  AGREGAR LA IMAGEN 7_10YR_R_WBA_M A LA LISTA DE BASE Y AGREGAR
+    # LA OPCION DE QUE DETECTE LA IMAGENES YA MARCADAS EN LA CARPETA de marked
+    print('Path: ' + path)
+    print('Save: ' + save_dir)
     # Start generator script
     start(path, save_dir)
