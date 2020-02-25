@@ -111,16 +111,16 @@ def select_color_space():
     # Capture the available color names
     for value in values:
         
-        # Ask for the last chroma value
+        # Ask for the last chroma value and it has to be valid
         c = input('On row ' + value + ', enter the last valid chroma value: ')
-        
-        # Check if the value is valid
-        if(c in chromas):
-            # Combine the values to generate the pending colors list
-            for chroma in chromas[: chromas.index(c) + 1]:
-                pending_colors.append('v' + value + 'c' + chroma)
-        else:
+        while(not(c in chromas)):
             print('Invalid value')
+            c = input('On row ' + value + ', enter the last valid chroma value: ')
+        
+        # Combine the values to generate the pending colors list
+        for chroma in chromas[: chromas.index(c) + 1]:
+            pending_colors.append('v' + value + 'c' + chroma)
+            
 
     print('You can now begin the color capture process!')
 
@@ -183,7 +183,7 @@ def remove_marked_images(images, marked_images):
         isMarked = False
         # Remove the extension
         im_name = images[i].split('jpg')[0][:-1]
-        print('Looking for ' + im_name)
+        #print('Looking for ' + im_name)
         for data in marked_images:
             # If the image is present then set the flag
             if(im_name in data):
@@ -194,7 +194,7 @@ def remove_marked_images(images, marked_images):
         # put it on the removal list
         if(isMarked):
             pending_removal.append(i)
-            print('Present')
+            #print('Present')
 
     # Remove the images
     for i in pending_removal[::-1]:
@@ -211,12 +211,19 @@ def start(path, save_dir):
 
     global card_name
 
-    # Read all the images and remove the ones we already marked
-    images = remove_marked_images(listdir(path), listdir(save_dir))
-    
+    # Read all the images and remember the total amount
+    images = listdir(path)
+    total_images = len(images)
+    # Remove the ones we already marked
+    images = remove_marked_images(images, listdir(save_dir))
+    # Count how many we have marked
+    marked_images = total_images - len(images)
+
+
     # Mark each image
     for im_name in images:
-        print(50*'-')
+        print(65*'-')
+        print('You have marked ' + str(marked_images) + '/' + str(total_images) + ' images')
         # Reset values for safety
         reset_values()
         # Read the image 
@@ -224,6 +231,7 @@ def start(path, save_dir):
         # Remove the extension
         im_name = im_name.split('jpg')[0][:-1]
         print('Working on image ' + im_name)
+        print('Zoom the image before you input all the values')
         # Set the card name, thanks to the image naming convention
         # we know the card name always follow the first _
         card_name = im_name.split('_')[1]
@@ -231,7 +239,11 @@ def start(path, save_dir):
         show_image(image, im_name)
         # Create the gt for the image and reset store data structures
         create_dataset(image, im_name, save_dir)
-        
+        # Count the marked image 
+        marked_images += 1
+
+    print(65*'-')
+    print(10*'-' + 'Every image has been marked succesfully!' + 10*'-')
 
 
 
@@ -244,8 +256,8 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color gt generetion tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_base/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_base/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     # TODO:  AGREGAR LA IMAGEN 7_10YR_R_WBA_M A LA LISTA DE BASE Y AGREGAR
     # LA OPCION DE QUE DETECTE LA IMAGENES YA MARCADAS EN LA CARPETA de marked
