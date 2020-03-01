@@ -254,13 +254,11 @@ def start(path, save_dir):
 if __name__ == '__main__':
 
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
-    print(10*'-' + 'Welcome to the soil color gt generetion tool' + 10*'-')
+    print(10*'-' + 'Welcome to the soil color gt generation tool' + 10*'-')
     # Ask for the images path
     path = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_base/'
     save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
-    # TODO:  AGREGAR LA IMAGEN 7_10YR_R_WBA_M A LA LISTA DE BASE Y AGREGAR
-    # LA OPCION DE QUE DETECTE LA IMAGENES YA MARCADAS EN LA CARPETA de marked
     print('Path: ' + path)
     print('Save: ' + save_dir)
     # Start generator script
