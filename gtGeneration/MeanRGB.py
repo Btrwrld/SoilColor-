@@ -2,6 +2,15 @@ from os import listdir
 import numpy as np
 import cv2, csv
 
+
+def calc_rgb_mean(image):
+    # If we read usig cv2 imread the value order is BGR
+    return [np.mean(image[:, :, 0]), 
+            np.mean(image[:, :, 1]),
+            np.mean(image[:, :, 2])]
+
+
+
 def start(path, save_dir):
 
 
@@ -14,7 +23,8 @@ def start(path, save_dir):
     # Remove the non image files
     for i in range( len(target_images) ):
         # If it isnt a png then remove it
-        if(not('png' in target_images[i]) ):
+        # If we dont want to use the references then remove them
+        if(not('png' in target_images[i]) or ('ref' in target_images[i])):
             pending_removal.append(i)
     # Remove the images
     for pr in pending_removal[::-1]:
@@ -28,6 +38,12 @@ def start(path, save_dir):
     for image in images:
         # Remove the extension from the image name
         image = image.split('jpg')[0][:-1]
+
+        # Since we are using a naming convention
+        # we know the reference name
+        ref_B1_mean = calc_rgb_mean(cv2.imread(save_dir + image + '_refB1.png'))
+        ref_D1_mean = calc_rgb_mean(cv2.imread(save_dir + image + '_refD1.png'))
+        ref_E1_mean = calc_rgb_mean(cv2.imread(save_dir + image + '_refE1.png'))
 
         # Get ready to recive info about the chips
         chips = []
@@ -51,9 +67,10 @@ def start(path, save_dir):
                 # Add the target name
                 chips.append(target_name)
                 # Get the components mean value
-                B_mean.append(np.mean(target[:, :, 0]))
-                G_mean.append(np.mean(target[:, :, 1]))
-                R_mean.append(np.mean(target[:, :, 2]))
+                mean_values = calc_rgb_mean(target)
+                B_mean.append(mean_values[0])
+                G_mean.append(mean_values[1])
+                R_mean.append(mean_values[2])
 
                 # Add the image to the removal list
                 pending_removal.append(t)
@@ -64,8 +81,14 @@ def start(path, save_dir):
         # Reset the variable for future use
         pending_removal = []
 
+        l = len(chips)
         # Save the csv file for the image
-        rows = zip(chips, R_mean, G_mean, B_mean)
+        rows = zip( chips, 
+                    R_mean, G_mean, B_mean, 
+                    l*[ref_B1_mean[2]], l*[ref_B1_mean[1]], l*[ref_B1_mean[0]],
+                    l*[ref_D1_mean[2]], l*[ref_D1_mean[1]], l*[ref_D1_mean[0]],
+                    l*[ref_E1_mean[2]], l*[ref_E1_mean[1]], l*[ref_E1_mean[0]])
+
         with open(save_dir + image + '_MeanValues.csv', "w") as f:
             w = csv.writer(f)
             for row in rows:
@@ -84,8 +107,8 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color mean rgb generation tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_base/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_base/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)
