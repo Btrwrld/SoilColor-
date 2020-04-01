@@ -107,8 +107,8 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color mean rgb generation tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_base/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_base/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)

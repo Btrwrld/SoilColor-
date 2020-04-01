@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 # Define the length in pixels from the center to the border of the square
 color_length = 4
+ref_length = 4
 
 # Create the data structures used to store the points
 ref_center = {  'B1' : (0,0),
@@ -33,7 +34,6 @@ def reset_values():
 
     global  color_length, next_ref, card_name, ref_center, color_center, pending_colors, values, chromas
     
-    color_length = 4
     ref_center = {  'B1' : (0,0),
                     'D1' : (0,0),
                     'E1' : (0,0),
@@ -129,12 +129,12 @@ def create_dataset(image, name, save_dir):
 
 
     # Get the reference points 
-    refB1 = image[  ref_center['B1'][1] - color_length : ref_center['B1'][1] + color_length,
-                    ref_center['B1'][0] - color_length : ref_center['B1'][0] + color_length, :]
-    refD1 = image[  ref_center['D1'][1] - color_length : ref_center['D1'][1] + color_length,
-                    ref_center['D1'][0] - color_length : ref_center['D1'][0] + color_length, :]         
-    refE1 = image[  ref_center['E1'][1] - color_length : ref_center['E1'][1] + color_length,
-                    ref_center['E1'][0] - color_length : ref_center['E1'][0] + color_length, :]          
+    refB1 = image[  ref_center['B1'][1] - ref_length : ref_center['B1'][1] + ref_length,
+                    ref_center['B1'][0] - ref_length : ref_center['B1'][0] + ref_length, :]
+    refD1 = image[  ref_center['D1'][1] - ref_length : ref_center['D1'][1] + ref_length,
+                    ref_center['D1'][0] - ref_length : ref_center['D1'][0] + ref_length, :]         
+    refE1 = image[  ref_center['E1'][1] - ref_length : ref_center['E1'][1] + ref_length,
+                    ref_center['E1'][0] - ref_length : ref_center['E1'][0] + ref_length, :]          
 
     # Save the references 
     cv2.imwrite(save_dir + name + '_refB1.png', refB1)
