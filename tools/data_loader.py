@@ -85,7 +85,7 @@ def get_mean_values_dataset(path):
     # Start with empty data frames
     targets = pd.DataFrame.from_dict( { 'Hue'   :   [],
                                         'Croma' :   [],
-                       get_mean_values_dataset                 'Value' :   []})
+                                        'Value' :   []})
 
     data = pd.DataFrame.from_dict({ 'R_mean'        :   [],
                                     'G_mean'        :   [],
