@@ -67,14 +67,26 @@ class Data_Model(nn.Module):
                 x = Variable(torch.from_numpy(x))
                 y = Variable(torch.from_numpy(y))
 
-                # Set the gradient buffer to zero
-                self.optimizer.zero_grad()
-                # Calc the loss and accumulate the grad
+                # According to pytorch documentation:
+                # Some optimization algorithms such as Conjugate Gradient and LBFGS 
+                # need to reevaluate the function multiple times, so you have to pass 
+                # in a closure that allows them to recompute your model. The closure 
+                # should clear the gradients, compute the loss, and return it.
+
+                # Add the closure function to calculate an iterative gradient
+                def closure():
+                    if torch.is_grad_enabled():
+                        self.optimizer.zero_grad()
+                    output = self(x)
+                    loss = self.loss(output, y)
+                    if loss.requires_grad:
+                        loss.backward()
+                    return loss
+                self.optimizer.step(closure)
+
+                # Calc loss again to check progress
                 pred = self(x)
-                loss = self.loss(pred, y)
-                loss.backward()
-                # Update the grad
-                self.optimizer.step()
+                loss = closure()
 
                 # Store the loss and the accuracy
                 epoch_train_loss[e] += loss 
@@ -108,10 +120,10 @@ class Data_Model(nn.Module):
             epoch_train_acc[e, :] = epoch_train_acc[e, :] / len(train_x)
 
 
-            # Print epoch info
+           # Print epoch info
             print('Epoch #' + str(e) + '\tTraining loss: ' + str(epoch_train_loss[e]) + ' \tValidation loss: ' + str(epoch_val_loss[e]))
 
-           # Store the model only if the validation is better than before
+            # Store the model only if the validation is better than before
             epoch_acc = epoch_val_acc[e, :].sum()
             if(epoch_acc >  best_acc):
                 best_acc = epoch_acc
