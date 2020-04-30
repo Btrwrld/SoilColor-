@@ -5,6 +5,12 @@ from sklearn import preprocessing
 from skimage.io import imread
 from skimage.transform import resize
 
+# Definition of normalizated hue, value and chroma values used for later classification
+hue_norm = np.array([0, 0.16666667, 0.33333333, 0.46666667, 0.5, 0.66666667, 0.83333333, 1])
+chroma_norm = np.array([0, 0.14285714, 0.28571429, 0.42857143, 0.71428571, 1])
+value_norm = np.array([0, 0.09090909, 0.27272727, 0.45454545, 0.63636364,0.81818182, 1])
+
+
 def _map_hue(hue):
     # Convert from values like 10R to 10.0 or similar
     hue_table = {   '10R'   :   10.0,
@@ -56,7 +62,7 @@ def _load_mean_values(path, file_name):
                     'ref_E1_R_mean', 'ref_E1_G_mean', 'ref_E1_B_mean']
 
 
-    return targets, data
+    return data, targets
 
 # Return the shuffled data and the targets
 def get_mean_values_dataset(path):
@@ -79,7 +85,7 @@ def get_mean_values_dataset(path):
     # Start with empty data frames
     targets = pd.DataFrame.from_dict( { 'Hue'   :   [],
                                         'Croma' :   [],
-                                        'Value' :   []})
+                       get_mean_values_dataset                 'Value' :   []})
 
     data = pd.DataFrame.from_dict({ 'R_mean'        :   [],
                                     'G_mean'        :   [],
@@ -96,10 +102,10 @@ def get_mean_values_dataset(path):
     # Start the data collection
     for image in mean_values:
         # Get the values
-        t, d = _load_mean_values(path, image)
+        d, t = _load_mean_values(path, image)
         # Append the data
-        targets = targets.append(t, ignore_index = True) 
-        data = data.append(d, ignore_index = True) 
+        targets = targets.append(t, ignore_index = True, sort=False) 
+        data = data.append(d, ignore_index = True, sort=False) 
 
 
     # Shuffle the values
@@ -109,9 +115,10 @@ def get_mean_values_dataset(path):
     targets = targets.reset_index(drop=True)
     data = data.reindex(new_order)
     data = data.reset_index(drop=True)
+
     
     # Return all 
-    return targets, data
+    return data, targets
 
 # Recieves a pandas df and normalizes column wise
 def minmax_normmalization(df):
@@ -129,19 +136,6 @@ def minmax_normmalization(df):
 
 
 
-def norm_image(image): 
-
-    # Norm between [0-1]
-    image /= 255.0
-    # Return as float
-    return image.astype('float32')
-
-def denorm_image(image): 
-
-    # Norm between [0-1]
-    image *= 255.0
-    # Return as float
-    return image.astype('uint8')
 
 def select_valid_images(images):
 
@@ -158,13 +152,23 @@ def select_valid_images(images):
 
     return valid_images
 
-# Image loader function, expects a shuffled images names list
-def load_images(path, image_names, batch_size):
+#   Image loader function, loads the images in the 
+#   order they are given, can load batches or the whole list.
+#
+#   path:           Directory where we'll look for the images.
+#   image_names:    List with the name of all the images.
+#   batch_size:     Number of images to load, by default uses -1
+#                   to load all the given images.
+#
+def load_images(path, image_names, batch_size=-1):
 
     x = []
     y = []
 
-    for i in range(batch_size):
+    if(batch_size == -1):
+        batch_size = len(image_names)
+
+    for _ in range(batch_size):
 
         # Read the image and resize it to 40x40
         name = image_names.pop(0)

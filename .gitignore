@@ -2,3 +2,17 @@
 *.jpg
 
 checkpoints/
+
+.vscode/
+
+__pycache__/
+
+nn/CNNregreIsion_1output.ipynb
+
+nn/Feedforward_regresión.m
+
+nn/LEER ANTES DE INICIAR.docx
+
+nn/Predecir y estimar etiquetas.ipynb
+
+tools/.~training_manager.py.insyncdl
