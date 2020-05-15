@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 
 # Define the length in pixels from the center to the border of the square
-color_length = 4
+#color_length = 4
+color_length = 75
 ref_length = 4
 
 # Create the data structures used to store the points
@@ -29,7 +30,7 @@ values = ['8', '7', '6', '5', '4', '3', '2.5']
 chromas = ['1', '2', '3', '4', '6', '8']
 
 
-# Resets global variables for safety
+# Resets global variables for safety 
 def reset_values():
 
     global  color_length, next_ref, card_name, ref_center, color_center, pending_colors, values, chromas
@@ -198,7 +199,7 @@ def remove_marked_images(images, marked_images):
 
     # Remove the images
     for i in pending_removal[::-1]:
-        images.pop(i)
+        print(images.pop(i))
 
 
     print('Removed ' + str(len(pending_removal)) + ' of ' + str(total_images) + ', ' + str(len(images)) + ' remaining')
@@ -256,8 +257,8 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color gt generation tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_base/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_base/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_big/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)

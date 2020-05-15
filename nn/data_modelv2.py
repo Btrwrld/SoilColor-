@@ -4,8 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F 
 
 from torch.autograd import Variable
-from tools.training_manager import get_data_batch, batch_accuracy, classify
-
+from tools.training_manager import get_data_batch, batch_accuracy, classify, plot_results
 
 
 
@@ -17,6 +16,8 @@ class Data_Model(nn.Module):
 
         # Set model name
         self.model_name = 'data'
+        self.save_dir = ''
+        self.hiperparameters = ''
 
         # Define loss and optimizer
         self.loss = loss
@@ -56,7 +57,7 @@ class Data_Model(nn.Module):
         num_batches = int(np.ceil(len(train_x) // batch_size))
         # Start the training loop
         for e in range(epochs):
-
+                
             # Training loop
             self.train()
             for i in range(num_batches):
@@ -122,6 +123,9 @@ class Data_Model(nn.Module):
 
            # Print epoch info
             print('Epoch #' + str(e) + '\tTraining loss: ' + str(epoch_train_loss[e]) + ' \tValidation loss: ' + str(epoch_val_loss[e]))
+
+            # Plot epoch info
+            plot_results(self.save_dir, self.model_name, e, self.hiperparameters, epoch_train_loss[:e], epoch_val_loss[:e], epoch_train_acc[:e], epoch_val_acc[:e])
 
             # Store the model only if the validation is better than before
             epoch_acc = epoch_val_acc[e, :].sum()

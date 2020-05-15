@@ -24,7 +24,10 @@ def start(path, save_dir):
     for i in range( len(target_images) ):
         # If it isnt a png then remove it
         # If we dont want to use the references then remove them
-        if(not('png' in target_images[i]) or ('ref' in target_images[i])):
+        if(not('png' in target_images[i]) 
+            or ('ref' in target_images[i])
+            or ('csv' in target_images[i])):
+            #print(target_images[i])
             pending_removal.append(i)
     # Remove the images
     for pr in pending_removal[::-1]:
@@ -33,11 +36,15 @@ def start(path, save_dir):
     pending_removal = []
 
     # Iterate over each base image to search for the
-    # targets assosiated targets
+    # targets associated targets
     c = 0
-    for image in images:
+    lti = len(target_images)
+    for image in target_images:
         # Remove the extension from the image name
-        image = image.split('jpg')[0][:-1]
+        image = image.split('png')[0][:-1]
+        
+        #image = image[:-5]
+        print(image)
 
         # Since we are using a naming convention
         # we know the reference name
@@ -52,7 +59,7 @@ def start(path, save_dir):
         B_mean = []
 
         # Go through every target
-        for t in range(len(target_images)):
+        '''for t in range(len(target_images)):
 
             # Get the target name
             target_name = target_images[t]
@@ -73,7 +80,18 @@ def start(path, save_dir):
                 R_mean.append(mean_values[2])
 
                 # Add the image to the removal list
-                pending_removal.append(t)
+                pending_removal.append(t)'''
+
+        # Read the image in BGR
+        target = cv2.imread(save_dir + image + '.png')
+
+        # Add the target name
+        chips.append(image + '.png')
+        # Get the components mean value
+        mean_values = calc_rgb_mean(target)
+        B_mean.append(mean_values[0])
+        G_mean.append(mean_values[1])
+        R_mean.append(mean_values[2])
 
         # Remove the used targets
         for pr in pending_removal[::-1]:
@@ -95,7 +113,7 @@ def start(path, save_dir):
                 w.writerow(row)
 
         c += 1
-        print('Marked ' + str(c) + '/' + str(len(images)))
+        print('Marked ' + str(c) + '/' + str(lti))
         
 
 
@@ -107,8 +125,8 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color mean rgb generation tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_base/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_small/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_small/'
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)

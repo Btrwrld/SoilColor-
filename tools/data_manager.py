@@ -1,3 +1,5 @@
+import csv
+
 import numpy as np
 import pandas as pd 
 from os import listdir
@@ -6,7 +8,7 @@ from skimage.io import imread
 from skimage.transform import resize
 
 # Definition of normalizated hue, value and chroma values used for later classification
-hue_norm = np.array([0, 0.16666667, 0.33333333, 0.46666667, 0.5, 0.66666667, 0.83333333, 1])
+hue_norm = np.array([0, 0.16666667, 0.33333333, 0.5, 0.66666667, 0.83333333, 1])
 chroma_norm = np.array([0, 0.14285714, 0.28571429, 0.42857143, 0.71428571, 1])
 value_norm = np.array([0, 0.09090909, 0.27272727, 0.45454545, 0.63636364,0.81818182, 1])
 
@@ -25,7 +27,7 @@ def _map_hue(hue):
     # If the hue value is found return its definition, else return NaN
     return hue_table.get(hue, float('NaN'))
 
-def _load_mean_values(path, file_name):
+def load_mean_values(path, file_name):
 
     # We know the mean values files end with that name 
     data = pd.read_csv(path + file_name, header=None) 
@@ -35,25 +37,25 @@ def _load_mean_values(path, file_name):
     targets = data.iloc[:, 0]
     data = data.iloc[:, 1:]
 
-    # Process the targets to separate into the Hue-Croma-Value
+    # Process the targets to separate into the Hue-Chroma-Value
     # using the names of the rows
     targets = targets.values.tolist()
     # Since one card is a constant hue, we just extract it, 
     # cast it to float and replicate it many times
     hue = [_map_hue(targets[0].split('_')[1])] * len(targets)
     value = []
-    croma = []
+    chroma = []
     for img in targets:
         # Get the components
         components = img.split('_')[5][:-4].split('c')
         # Extract the values we need
-        croma.append(float(components[1]))
+        chroma.append(float(components[1]))
         value.append(float(components[0][1:]))
 
 
     # Create a dataframe with the target values
     targets = pd.DataFrame.from_dict( { 'Hue'   :   hue,
-                                        'Croma' :   croma,
+                                        'Chroma' :  chroma,
                                         'Value' :   value})
     # Set column names to data
     data.columns = ['R_mean', 'G_mean', 'B_mean', 
@@ -84,7 +86,7 @@ def get_mean_values_dataset(path):
 
     # Start with empty data frames
     targets = pd.DataFrame.from_dict( { 'Hue'   :   [],
-                                        'Croma' :   [],
+                                        'Chroma' :   [],
                                         'Value' :   []})
 
     data = pd.DataFrame.from_dict({ 'R_mean'        :   [],
@@ -102,10 +104,10 @@ def get_mean_values_dataset(path):
     # Start the data collection
     for image in mean_values:
         # Get the values
-        d, t = _load_mean_values(path, image)
+        d, t = load_mean_values(path, image)
         # Append the data
-        targets = targets.append(t, ignore_index = True, sort=False) 
-        data = data.append(d, ignore_index = True, sort=False) 
+        targets = pd.concat([targets, t], ignore_index = True) 
+        data = pd.concat([data, d], ignore_index = True) 
 
 
     # Shuffle the values
@@ -191,5 +193,17 @@ def load_images(path, image_names, batch_size=-1):
 
     return x, y
 
+
+
+'''
+    Takes a direction to create a csv file in and a zip of values
+    as rows
+ 
+'''
+def write_csv(save_dir, rows):
+    with open(save_dir, "w") as f:
+                w = csv.writer(f)
+                for row in rows:
+                    w.writerow(row)
     
     

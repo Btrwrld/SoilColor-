@@ -4,49 +4,12 @@ from datetime import datetime
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
 
-from tools.data_loader import *
+from tools.data_manager import *
 from nn.image_model import Image_Model
 from nn.data_modelv2 import Data_Model 
 
 
-
-
-
-def plot_results(save_dir, model_name, epochs, hiperparameters, epoch_train_loss, epoch_val_loss, epoch_train_acc, epoch_val_acc):
-
-    # Create the image
-    fig, axs = plt.subplots(3, sharex=True, gridspec_kw={'hspace': 0.5})
-    fig.suptitle(hiperparameters + ' model loss and accuracy')
-
-    # Plot the loss
-    axs[0].set_title('Model loss')
-    axs[0].plot(np.arange(epochs), epoch_train_loss, 'r-', label='Training')
-    axs[0].plot(np.arange(epochs), epoch_val_loss, 'b-', label='Validation')
-    axs.flat[0].set(xlabel='Epochs', ylabel='MSE loss')
-    axs[0].legend()
-
-    # Plot the training accuracy
-    axs[1].set_title('Training accuracy')
-    axs[1].plot(np.arange(epochs), epoch_train_acc[:, 0], 'g-', label='Hue')
-    axs[1].plot(np.arange(epochs), epoch_train_acc[:, 1], 'c-', label='Chroma')
-    axs[1].plot(np.arange(epochs), epoch_train_acc[:, 2], 'y-', label='Value')
-    axs.flat[1].set(xlabel='Epochs', ylabel='Accuracy')
-    axs[1].legend()
-
-    # Plot the validation accuracy
-    axs[2].set_title('Validation accuracy')
-    axs[2].plot(np.arange(epochs), epoch_val_acc[:, 0], 'g-', label='Hue')
-    axs[2].plot(np.arange(epochs), epoch_val_acc[:, 1], 'c-', label='Chroma')
-    axs[2].plot(np.arange(epochs), epoch_val_acc[:, 2], 'y-', label='Value')
-    axs.flat[2].set(xlabel='Epochs', ylabel='Accuracy')
-    axs[2].legend()
-
-    plt.savefig(save_dir + '/' + model_name + hiperparameters + '_loss.png')
-    plt.show()
-
-    print('Saving data in: ' + save_dir)
 
 
 
@@ -82,7 +45,7 @@ def train(model_name, data_path):
 
         # Generate model and define the optimizer
         model = Data_Model(loss = nn.MSELoss()).double()
-        model.optimizer = optim.LBFGS(model.parameters(), history_size=10, max_iter=10)
+        model.optimizer = optim.LBFGS(model.parameters(), history_size=300, max_iter=50)
         #model.optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.0001)
         #model.optimizer  = optim.SGD(model.parameters(), lr=lr)
 
@@ -116,13 +79,16 @@ def train(model_name, data_path):
     if(batch_size < 0):
         batch_size = len(train_x)
 
-
     # Create the folder
     now = datetime.now()
     now = now.strftime("%d-%m-%Y_%H:%M:%S")
-    hiperparameters = '_' + model_name + '_e' + str(epochs) + '_bs' + str(batch_size) + '_lr' + str(lr)
+    hiperparameters = model_name + '_e' + str(epochs) + '_bs' + str(batch_size) + '_lr' + str(lr)
     save_dir = str(pathlib.Path().absolute()) + '/checkpoints/' + now + hiperparameters
     os.mkdir(save_dir)
+
+    # Add plot data
+    model.save_dir = save_dir
+    model.hiperparameters = hiperparameters
     
     # Verify the model
     print(model)
@@ -131,10 +97,6 @@ def train(model_name, data_path):
 
 
     
-    plot_results(save_dir, model.model_name, epochs, hiperparameters, epoch_train_loss, epoch_val_loss, epoch_train_acc, epoch_val_acc)
-
-
-
 if __name__ == "__main__":
     
     model = ''

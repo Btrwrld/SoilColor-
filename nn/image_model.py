@@ -5,7 +5,7 @@ import torch.nn.init as init
 
 from torch.autograd import Variable
 
-from tools.training_manager import get_data_batch, batch_accuracy, classify
+from tools.training_manager import get_data_batch, batch_accuracy, classify, plot_results
 
 
 
@@ -16,6 +16,8 @@ class Image_Model(nn.Module):
 
         # Set model name
         self.model_name = 'images'
+        self.save_dir = ''
+        self.hiperparameters = ''
 
         # Define loss and optimizer
         self.loss = loss
@@ -86,8 +88,8 @@ class Image_Model(nn.Module):
                 # Get the training batch
                 x, y = get_data_batch(train_x, train_y, i, batch_size)
                 # Cast to tensor
-                x = Variable(torch.from_numpy(x).to(device))
-                y = Variable(torch.from_numpy(y).to(device))
+                x = Variable(torch.from_numpy(x)).to(device)
+                y = Variable(torch.from_numpy(y)).to(device)
 
                 # Set the gradient buffer to zero
                 self.zero_grad()
@@ -113,7 +115,7 @@ class Image_Model(nn.Module):
 
                 # Cast to tensor
                 x = Variable(torch.from_numpy(np.expand_dims(val_x[i], axis=0))).to(device)
-                y = Variable(torch.from_numpy(val_y[i])).to(device)
+                y = Variable(torch.from_numpy(np.expand_dims(val_y[i], axis=0))).to(device)
 
                 # Calc the loss and accumulate the grad
                 pred = self(x)
@@ -126,7 +128,7 @@ class Image_Model(nn.Module):
 
                 # Store the loss and acc
                 epoch_val_loss[e] += loss
-                epoch_val_acc[e, :] += (classify(pred.data.numpy()[0]) == y.data.numpy())[0]
+                epoch_val_acc[e, :] += np.isclose(np.array([classify(pred.data.numpy()[0])]), y.data.numpy())[0]
             
             # Calc the mean loss
             epoch_val_loss[e] = epoch_val_loss[e] / len(val_x)
@@ -137,6 +139,9 @@ class Image_Model(nn.Module):
 
             # Print epoch info
             print('Epoch #' + str(e) + '\tTraining loss: ' + str(epoch_train_loss[e]) + ' \tValidation loss: ' + str(epoch_val_loss[e]))
+
+            # Plot epoch info
+            plot_results(self.save_dir, self.model_name, e, self.hiperparameters, epoch_train_loss[:e], epoch_val_loss[:e], epoch_train_acc[:e], epoch_val_acc[:e])
 
             # Store the model only if the validation is better than before
             epoch_acc = epoch_val_acc[e, :].sum()
