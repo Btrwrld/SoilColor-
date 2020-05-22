@@ -137,5 +137,5 @@ class Data_Model(nn.Module):
 
 
 
-#python3 train.py -m data -a train -d /home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/
+#python3 train.py -m data -a train -d /home/erick/google_drive/PARMA/SoilColor/Images/o_marked_definitive/
 

@@ -1,4 +1,4 @@
-import getopt, sys, os, torch, pathlib, random
+import getopt, sys, os, torch, pathlib
 import numpy as np
 from datetime import datetime
 import torch.nn as nn
@@ -31,47 +31,44 @@ def train(model_name, data_path):
     
     # Instantiate the selected model
     if(model_name == 'data'):
-        # Load the data and normalize it
-        x, y = get_mean_values_dataset(data_path)
-        y, y_norm = minmax_normmalization(y)
-        x, x_norm = minmax_normmalization(x)
-        # Divide the dataset in 70-30 for training and validation
-        lim = int(len(y) * 0.7)
-        train_x = x.iloc[:lim, :].values
-        train_y = y.iloc[:lim, :].values
-        val_x = x.iloc[lim:, :].values
-        val_y = y.iloc[lim:, :].values
+        # Load the training data and normalize it
+        train_x, train_y = get_mean_values_dataset(data_path + 'train/', shuffle=False)
+        train_x, norm_x = minmax_normmalization(train_x)
+        train_y = normalize_targets(train_y)
+        # Load the validation data and normalize it
+        val_x, val_y = get_mean_values_dataset(data_path + 'val/', shuffle=False)
+        val_x, _ = minmax_normmalization(val_x, norm_x)
+        val_y  = normalize_targets(val_y)
+        # Get the values 
+        train_x = train_x.values
+        train_y = train_y.values
+        val_x = val_x.values
+        val_y = val_y.values
+
+        print('Using ' + str(len(train_x)) + ' training samples')
+        print('Using ' + str(len(val_x)) + ' validation samples')
 
 
         # Generate model and define the optimizer
         model = Data_Model(loss = nn.MSELoss()).double()
         model.optimizer = optim.LBFGS(model.parameters(), history_size=300, max_iter=50)
-        #model.optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.0001)
-        #model.optimizer  = optim.SGD(model.parameters(), lr=lr)
 
 
     elif(model_name == 'image'):
-        # Read all available images in the folder and select the valid ones
-        available_images = os.listdir(data_path)
-        available_images = select_valid_images(available_images)
-        # Shuffle the images
-        random.shuffle(available_images)
         # Load the data
-        x, y = load_images(data_path, available_images)    
+        train_x, train_y = load_images(data_path + 'train/')
+        val_x, val_y = load_images(data_path + 'val/')    
         # Normalize the data and re arrange image dimensions
-        x = np.transpose(x, (0, 3, 2, 1)) / 255 
-        y, _ = minmax_normmalization(pd.DataFrame(y))
+        train_x = np.transpose(train_x, (0, 3, 2, 1)) / 255 
+        train_y = normalize_targets(pd.DataFrame(train_y))
+        val_x = np.transpose(val_x, (0, 3, 2, 1)) / 255 
+        val_y = normalize_targets(pd.DataFrame(val_y))
         # Get the numpy array containing the values
-        y = y.values
-        # Divide the dataset in 70-30 for training and validation
-        lim = int(len(y) * 0.7)
-        train_x = x[:lim]
-        train_y = y[:lim]
-        val_x = x[lim:]
-        val_y = y[lim:]
+        train_y = train_y.values
+        val_y = val_y.values
 
         # Create the model and define the optimizer
-        model = Image_Model(loss = nn.MSELoss()).double()
+        model = Image_Model(loss = nn.L1Loss()).double()
         model.optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.0001)
 
 
@@ -136,6 +133,6 @@ if __name__ == "__main__":
         train(model, data_path)
     
    
-# python3 train.py -m image -a train -d ../Images/o1_fused/
-# python3 train.py -m data -a train -d ../Images/o1_marked/
+# python3 train.py -m image -a train -d ../Images/o_fused_definitive/
+# python3 train.py -m data -a train -d ../Images/o_marked_definitive/
 

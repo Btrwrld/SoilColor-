@@ -1,0 +1,10 @@
+#!/bin/bash
+
+rm -rf ../Images/o_fused_definitive/* 
+mkdir ../Images/o_fused_definitive/test 
+mkdir ../Images/o_fused_definitive/train 
+mkdir ../Images/o_fused_definitive/val
+rm -rf ../Images/o_marked_definitive/* 
+mkdir ../Images/o_marked_definitive/test 
+mkdir ../Images/o_marked_definitive/train 
+mkdir ../Images/o_marked_definitive/val
