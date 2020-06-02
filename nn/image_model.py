@@ -1,4 +1,4 @@
-import torch
+import torch, csv
 import numpy as np
 import torch.nn as nn
 import torch.nn.init as init
@@ -151,3 +151,57 @@ class Image_Model(nn.Module):
 
 
         return epoch_train_loss, epoch_val_loss, epoch_train_acc, epoch_val_acc
+
+
+
+
+    def start_test(self, test_x, test_y, log_path):
+
+        l = len(test_x)
+
+        epoch_test_loss = np.zeros(l)
+        epoch_test_acc = np.zeros([l, 3])
+
+        # Validation loop
+        self.eval()
+        for i in range(len(test_x)):
+
+            # Get the samples
+            x = test_x[i, :]
+            y = test_y[i, :]
+            # Cast to tensor
+            x = Variable(torch.from_numpy(np.expand_dims(test_x[i], axis=0)))
+            y = Variable(torch.from_numpy(np.expand_dims(test_y[i], axis=0)))
+
+            # Calc the loss and accumulate the grad
+            pred = self(x)
+            loss = self.loss(pred, y)
+
+            # Store the loss and acc
+            epoch_test_loss[i] += loss
+            epoch_test_acc[i, :] += np.isclose(np.array([classify(pred.data.numpy()[0])]), y.data.numpy())[0]
+
+        mean_loss = np.mean(epoch_test_loss)
+        h_acc = np.mean(epoch_test_acc[:, 0])
+        c_acc = np.mean(epoch_test_acc[:, 1])
+        v_acc = np.mean(epoch_test_acc[:, 2])
+        accuracy = np.sum(epoch_test_acc, 1)
+        accuracy[accuracy < 3] = 0
+        accuracy[accuracy == 3] = 1
+        accuracy = np.mean(accuracy)
+
+        # Write csv     
+        logs = open('image_test_results.csv', 'w')
+        with logs:
+            writer = csv.writer(logs)
+
+            # Write the header
+            writer.writerow(["Mean_loss", "Accuracy", "Hue_accuracy", "Chroma_accuracy", "Value_accuracy"])
+            # Write the data
+            writer.writerow([mean_loss, accuracy, accuracy, h_acc, c_acc, v_acc])
+
+        print("Mean_loss: " + str(mean_loss))
+        print("Accuracy: " + str(accuracy))
+        print("Hue_accuracy: " + str(h_acc))
+        print("Chroma_accuracy: " + str(c_acc))
+        print("Value_accuracy: " + str(v_acc))

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 
 from tools.data_manager import hue_norm, chroma_norm,value_norm
 
+
+
 def classify(pred):
 
     # Get the index of the closest value
@@ -39,7 +41,6 @@ def batch_accuracy(pred, y):
         acc += np.isclose(np.array(classify(pred[i, :])), y[i, :])
     
     return acc
-
 
 
 

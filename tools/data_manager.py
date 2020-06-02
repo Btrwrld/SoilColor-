@@ -154,7 +154,6 @@ def get_mean_values_dataset(path, shuffle=True):
 
 
 def normalize_targets(df):
-
     return pd.DataFrame(target_normalizer.transform(df.values), columns=df.columns)
 
 
@@ -174,6 +173,16 @@ def minmax_normmalization(df, minmax_scaler=None):
     # Return the normalized data and the normalizator to compute the inverse
     return df, minmax_scaler
 
+
+
+
+
+
+
+
+
+
+############################## Image related stuff ##############################
 
 '''
     Takes a dirty list and a list with a number of valid formats, then it
