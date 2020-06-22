@@ -18,3 +18,11 @@ nn/Predecir y estimar etiquetas.ipynb
 tools/.~training_manager.py.insyncdl
 
 nn/.directory
+
+base_info/
+
+tools/.directory
+
+data_test_results.csv
+
+ResultadosEstadísticas.xlsx
