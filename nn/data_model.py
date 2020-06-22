@@ -1,11 +1,11 @@
-import torch 
+import torch, csv
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F 
 
+from scipy import stats
 from torch.autograd import Variable
-from tools.training_manager import get_data_batch, batch_accuracy, classify
-
+from tools.training_manager import get_data_batch, batch_accuracy, classify, plot_results
 
 
 
@@ -17,6 +17,8 @@ class Data_Model(nn.Module):
 
         # Set model name
         self.model_name = 'data'
+        self.save_dir = ''
+        self.hiperparameters = ''
 
         # Define loss and optimizer
         self.loss = loss
@@ -24,10 +26,10 @@ class Data_Model(nn.Module):
 
         # Input is a feature vector of 1x12 and we want a 1x60 output vector
         self.hidden = nn.Linear(in_features=12, out_features=60)
-        self.sig1 = nn.Sigmoid()
+        self.sig1 = nn.Tanh()
         # And we want a 1x3 output so we can make the regression 
         self.output = nn.Linear(in_features=60, out_features=3)
-        self.sig2 = nn.Sigmoid()
+        self.sig2 = nn.Tanh()
 
 
     def forward(self, x):
@@ -56,7 +58,7 @@ class Data_Model(nn.Module):
         num_batches = int(np.ceil(len(train_x) // batch_size))
         # Start the training loop
         for e in range(epochs):
-
+                
             # Training loop
             self.train()
             for i in range(num_batches):
@@ -67,14 +69,26 @@ class Data_Model(nn.Module):
                 x = Variable(torch.from_numpy(x))
                 y = Variable(torch.from_numpy(y))
 
-                # Set the gradient buffer to zero
-                self.optimizer.zero_grad()
-                # Calc the loss and accumulate the grad
+                # According to pytorch documentation:
+                # Some optimization algorithms such as Conjugate Gradient and LBFGS 
+                # need to reevaluate the function multiple times, so you have to pass 
+                # in a closure that allows them to recompute your model. The closure 
+                # should clear the gradients, compute the loss, and return it.
+
+                # Add the closure function to calculate an iterative gradient
+                def closure():
+                    if torch.is_grad_enabled():
+                        self.optimizer.zero_grad()
+                    output = self(x)
+                    loss = self.loss(output, y)
+                    if loss.requires_grad:
+                        loss.backward()
+                    return loss
+                self.optimizer.step(closure)
+
+                # Calc loss again to check progress
                 pred = self(x)
-                loss = self.loss(pred, y)
-                loss.backward()
-                # Update the grad
-                self.optimizer.step()
+                loss = closure()
 
                 # Store the loss and the accuracy
                 epoch_train_loss[e] += loss 
@@ -108,10 +122,13 @@ class Data_Model(nn.Module):
             epoch_train_acc[e, :] = epoch_train_acc[e, :] / len(train_x)
 
 
-            # Print epoch info
+           # Print epoch info
             print('Epoch #' + str(e) + '\tTraining loss: ' + str(epoch_train_loss[e]) + ' \tValidation loss: ' + str(epoch_val_loss[e]))
 
-           # Store the model only if the validation is better than before
+            # Plot epoch info
+            plot_results(self.save_dir, self.model_name, e, self.hiperparameters, epoch_train_loss[:e], epoch_val_loss[:e], epoch_train_acc[:e], epoch_val_acc[:e])
+
+            # Store the model only if the validation is better than before
             epoch_acc = epoch_val_acc[e, :].sum()
             if(epoch_acc >  best_acc):
                 best_acc = epoch_acc
@@ -120,6 +137,112 @@ class Data_Model(nn.Module):
         return epoch_train_loss, epoch_val_loss, epoch_train_acc, epoch_val_acc
 
 
+    def start_test(self, test_x, test_y, log_path):
 
-#python3 train.py -m data -a train -d /home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/
+        l = len(test_x)
+
+        epoch_test_loss = np.zeros(l)
+        epoch_test_acc = np.zeros([l, 3])
+
+        # Validation loop
+        self.eval()
+        for i in range(len(test_x)):
+
+            # Get the samples
+            x = test_x[i, :]
+            y = test_y[i, :]
+            # Cast to tensor
+            x = Variable(torch.from_numpy(x))
+            y = Variable(torch.from_numpy(y))
+
+            # Calc the loss and accumulate the grad
+            pred = self(x)
+            loss = self.loss(pred, y)
+
+            # Store the loss and acc
+            epoch_test_loss[i] += loss
+            epoch_test_acc[i, :] += np.isclose(np.array(classify(pred.data.numpy())), y.data.numpy())
+
+        mean_loss = np.mean(epoch_test_loss)
+        h_acc = np.mean(epoch_test_acc[:, 0])
+        c_acc = np.mean(epoch_test_acc[:, 1])
+        v_acc = np.mean(epoch_test_acc[:, 2])
+        accuracy = np.sum(epoch_test_acc, 1)
+        accuracy[accuracy < 3] = 0
+        accuracy[accuracy == 3] = 1
+        accuracy = np.mean(accuracy)
+
+        # Write csv     
+        logs = open('data_test_results.csv', 'w')
+        with logs:
+            writer = csv.writer(logs)
+
+            # Write the header
+            writer.writerow(["Mean_loss", "Accuracy", "Hue_accuracy", "Chroma_accuracy", "Value_accuracy"])
+            # Write the data
+            writer.writerow([mean_loss, accuracy, accuracy, h_acc, c_acc, v_acc])
+
+        print("Mean_loss: " + str(mean_loss))
+        print("Accuracy: " + str(accuracy))
+        print("Hue_accuracy: " + str(h_acc))
+        print("Chroma_accuracy: " + str(c_acc))
+        print("Value_accuracy: " + str(v_acc))
+
+
+
+    def pixelwise_test(self, test_x, test_y, log_path, im_size):
+
+        offset = im_size*im_size
+        l = int(len(test_x)/offset)
+        epoch_test_acc = np.zeros([l, 3])
+
+        preds =  np.zeros([offset, 3])
+
+        # Validation loop
+        self.eval()
+        for j in range(l):
+
+            
+            for i in range(offset*j, offset*(j+1)):
+
+                # Get the samples
+                x = test_x[i, :]
+                y = test_y[i, :]
+                # Cast to tensor
+                x = Variable(torch.from_numpy(x))
+                y = Variable(torch.from_numpy(y))
+
+                # Save the prediction
+                preds[int(i/offset)] = self(x).data.numpy()
+
+            # Get the mode
+            pred = np.array([float(stats.mode(preds[:,0])[0]),
+                            float(stats.mode(preds[:,1])[0]),
+                            float(stats.mode(preds[:,2])[0])])
+            # Store the acc
+            epoch_test_acc[j, :] += np.isclose(pred, y.data.numpy())
+
+        h_acc = np.mean(epoch_test_acc[:, 0])
+        c_acc = np.mean(epoch_test_acc[:, 1])
+        v_acc = np.mean(epoch_test_acc[:, 2])
+        accuracy = np.sum(epoch_test_acc, 1)
+        accuracy[accuracy < 3] = 0
+        accuracy[accuracy == 3] = 1
+        accuracy = np.mean(accuracy)
+
+        # Write csv     
+        logs = open('data_test_results.csv', 'w')
+        with logs:
+            writer = csv.writer(logs)
+
+            # Write the header
+            writer.writerow(["Accuracy", "Hue_accuracy", "Chroma_accuracy", "Value_accuracy"])
+            # Write the data
+            writer.writerow([accuracy, accuracy, h_acc, c_acc, v_acc])
+
+        print("Accuracy: " + str(accuracy))
+        print("Hue_accuracy: " + str(h_acc))
+        print("Chroma_accuracy: " + str(c_acc))
+        print("Value_accuracy: " + str(v_acc))
+
 
