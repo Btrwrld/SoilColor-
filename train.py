@@ -7,7 +7,7 @@ from torch.autograd import Variable
 
 from tools.data_manager import *
 from nn.image_model import Image_Model
-from nn.data_modelv2 import Data_Model 
+from nn.data_model import Data_Model 
 
 
 
@@ -22,7 +22,7 @@ from nn.data_modelv2 import Data_Model
 #       data_path: Directory containing all the data necesary to train the model
 #
 #   Return: None
-def train(model_name, data_path):
+def train(model_name, data_path, extra=''):
 
     # Start training and backprop
     epochs = int(input('Ingrese el número de epochs que desea entrenar: '))
@@ -45,13 +45,12 @@ def train(model_name, data_path):
         val_x = val_x.values
         val_y = val_y.values
 
-        print('Using ' + str(len(train_x)) + ' training samples')
-        print('Using ' + str(len(val_x)) + ' validation samples')
-
 
         # Generate model and define the optimizer
         model = Data_Model(loss = nn.MSELoss()).double()
         model.optimizer = optim.LBFGS(model.parameters(), history_size=300, max_iter=50)
+
+    #elif(model_name == 'data_folder'):
 
 
     elif(model_name == 'image'):
@@ -79,16 +78,18 @@ def train(model_name, data_path):
     # Create the folder
     now = datetime.now()
     now = now.strftime("%d-%m-%Y_%H:%M:%S")
-    hiperparameters = model_name + '_e' + str(epochs) + '_bs' + str(batch_size) + '_lr' + str(lr)
-    save_dir = str(pathlib.Path().absolute()) + '/checkpoints/' + now + hiperparameters
+    hiperparameters = model_name + '_e' + str(epochs) + '_bs' + str(batch_size) + '_lr' + str(lr) + '_' + extra
+    save_dir = str(pathlib.Path().absolute()) + '/checkpoints/' + now + '_' + hiperparameters 
     os.mkdir(save_dir)
 
     # Add plot data
     model.save_dir = save_dir
     model.hiperparameters = hiperparameters
     
-    # Verify the model
+    # Verify the model and data
     print(model)
+    print('Using ' + str(len(train_x)) + ' training samples')
+    print('Using ' + str(len(val_x)) + ' validation samples')
     # Do the training
     model.start_training(save_dir, train_x, train_y, val_x, val_y, epochs, batch_size, lr)
 
@@ -99,7 +100,7 @@ def train(model_name, data_path):
 
 """
 
-def infer(weights_file, target_dir):
+def infer(weights_file, target_dir, extra):
 
     # Create model 
     model = None
@@ -126,7 +127,21 @@ def infer(weights_file, target_dir):
             print(model)
 
 
-    if(isDataModel):
+
+    if('pixelwise' in extra):
+        # Load the training data and normalize it
+        test_x, test_y, size  = get_pixelwise_mean_values(data_path + 'test/')
+        test_x, norm_x = minmax_normmalization(test_x)
+        test_y = normalize_targets(test_y)
+        # Get the values 
+        test_x = test_x.values
+        test_y = test_y.values
+
+        # Start testing
+        model.pixelwise_test(test_x, test_y, data_path, size)
+
+
+    elif(isDataModel):
 
         # Load the training data and normalize it
         test_x, test_y = get_mean_values_dataset(data_path + 'test/', shuffle=False)
@@ -135,6 +150,9 @@ def infer(weights_file, target_dir):
         # Get the values 
         test_x = test_x.values
         test_y = test_y.values
+
+        # Start testing
+        model.start_test(test_x, test_y, data_path)
 
     else:
         # Load the data
@@ -145,8 +163,8 @@ def infer(weights_file, target_dir):
         # Get the numpy array containing the values
         test_y = test_y.values
 
-    # Start testing
-    model.start_test(test_x, test_y, data_path)
+        # Start testing
+        model.start_test(test_x, test_y, data_path)
 
 
 
@@ -159,11 +177,12 @@ if __name__ == "__main__":
     model = ''
     action = ''
     data_path = ''
+    extra = ''
 
     try:
         # We want to recognize m, a, d as options with argument thats why 
         # the : follows them, h doesnt need arguments so its alone
-        opts, args = getopt.getopt(sys.argv[1:],"hm:a:d:",["model=","action=","data="])
+        opts, args = getopt.getopt(sys.argv[1:],"hm:a:d:e:",["model=","action=","data=","extra="])
     except getopt.GetoptError:
         print('python3 train.py -m <model> -a <action> -d <data path> \nInference looks for the latest folder with the model name, training creates this folder and saves the weigths there')
         sys.exit(2)
@@ -172,7 +191,7 @@ if __name__ == "__main__":
             sys.exit('python3 train.py -m <model> -a <action> -d <data path> \nInference looks for the latest folder with the model name, training creates this folder and saves the weigths there')
 
         elif opt in ("-m", "--model"):
-            if((arg == 'data') or (arg == 'image') or (os.path.isfile(arg))):
+            if((arg == 'data') or (arg == 'data_folder') or (arg == 'image') or (os.path.isfile(arg))):
                 model = arg
             else:
                 sys.exit('Unavailable model, please choose data, image or a model weight')
@@ -187,17 +206,50 @@ if __name__ == "__main__":
         elif opt in ("-d", "--data"):
             data_path = arg
 
+        elif opt in ("-e", "--extra"):
+            extra = arg
+
 
     print('Selected ' + model + ' model for ' + action + ', using the data stored in ' + data_path)
     
 
     if (action == 'train'):
-        train(model, data_path)
+        train(model, data_path, extra)
     else:
-        infer(model, data_path)
+        infer(model, data_path, extra)
     
-   
-# python3 train.py -m image -a train -d ../Images/o_fused_definitive/
-# python3 train.py -m data -a train -d ../Images/o_marked_definitive/
-# python3 train.py -m checkpoints/22-05-2020_01:05:41data_e100_bs1979_lr0.0001_DD0/data.pth -a infer -d ../Images/o_marked_definitive/
-# python3 train.py -m checkpoints/22-05-2020_07:38:34image_e1000_bs64_lr0.0001/images.pth -a infer -d ../Images/o_fused_definitive/
+
+# Training
+
+# Data model
+# python3 train.py -m data -a train -d ../Images/definitive/o1_marked/ -e LBFGS_MSE_dataset1
+
+# python3 train.py -m data -a train -d ../Images/definitive/o2_marked/ -e LBFGS_MSE_dataset2
+
+# python3 train.py -m data -a train -d ../Images/definitive/o_marked/ -e LBFGS_MSE_Full_dataset
+
+# Image model
+# python3 train.py -m image -a train -d ../Images/definitive/o1_fused/ -e Adam_MAE_dataset1
+
+# python3 train.py -m image -a train -d ../Images/definitive/o2_fused/ -e Adam_MAE_dataset2
+
+# python3 train.py -m image -a train -d ../Images/definitive/o_fused/ -e Adam_MAE_Full_dataset
+
+
+# Inference
+
+# Data model
+# python3 train.py -m checkpoints/03-06-2020_18:48:30_data_e70_bs999_lr0.0001_LBFGS_MSE_dataset1/data.pth -a infer -d ../Images/definitive/o1_marked/
+
+# python3 train.py -m checkpoints/03-06-2020_19:22:36_data_e100_bs1008_lr0.0001_LBFGS_MSE_dataset2/data.pth -a infer -d ../Images/definitive/o2_marked/
+
+# python3 train.py -m checkpoints/03-06-2020_20:19:12_data_e100_bs1979_lr0.0001_LBFGS_MSE_Full_dataset/data.pth -a infer -d ../Images/definitive/o_marked/
+
+# python3 train.py -m checkpoints/03-06-2020_19:22:36_data_e100_bs1008_lr0.0001_LBFGS_MSE_dataset2/data.pth -a infer -d ../Images/definitive/ort_big_marked/ -e pixelwise
+
+# Image model
+# python3 train.py -m checkpoints/04-06-2020_03:57:57_image_e500_bs128_lr0.0001_Adam_MAE_dataset1/images.pth -a infer -d ../Images/definitive/o1_fused/
+
+# python3 train.py -m checkpoints/22-05-2020_07:38:34image_e1000_bs64_lr0.0001/images.pth -a infer -d ../Images/definitive/o2_fused/
+
+# python3 train.py -m checkpoints/22-05-2020_07:38:34image_e1000_bs64_lr0.0001/images.pth -a infer -d ../Images/definitive/o_fused/

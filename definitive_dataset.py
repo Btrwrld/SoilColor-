@@ -1,5 +1,4 @@
-import random, shutil
-from os import listdir
+import random, shutil, os
 
 from tools.data_manager import *
 
@@ -17,14 +16,16 @@ def merge_csvs(source_dirs):
     # Read all the csv files in each folder
     for sd in source_dirs:
         # Read all csv's
-        files = listdir(sd)
+        files = os.listdir(sd)
         #print(str(files) + '\n')
         # Select only the csv's called mean vales
-        files = select_valid_files(files, ['MeanValues'], 0)
+        files = select_valid_files(files, ['MeanValues'])
         # For each file
         for f in files:
+            new_csv = pd.read_csv(sd + f, header=None)
+            new_csv[len(new_csv.columns.values)] = sd.split('/')[-2] + '/'
             # Read it and append
-            csvs = pd.concat([csvs, pd.read_csv(sd + f, header=None)], ignore_index = True) 
+            csvs = pd.concat([csvs, new_csv], ignore_index = True) 
 
 
     return csvs
@@ -46,7 +47,7 @@ def calc_partition_pos(max_len, train_perc, val_size, test_perc):
 def copy_if_in_source(source_dir, target_dir, imgs):
 
     # Get the elements in source
-    source_imgs = listdir(source_dir)
+    source_imgs = os.listdir(source_dir)
     pending_removal = []
 
     # For each element in imgs
@@ -75,15 +76,19 @@ def copy_if_in_source(source_dir, target_dir, imgs):
     return imgs
 
     
-def generate_csv_dataset(source_dirs, target_dir):
+def generate_csv_dataset(source_dirs, target_dir, train_perc, val_size, test_perc):
 
     # Get all the data in the csvs
     csvs = merge_csvs(source_dirs)
     # Shuffle the rows 
     csvs = shuffle_df(csvs)    
     # Get the limits for each partition
-    tr_l, v_l, t = calc_partition_pos(len(csvs), 0.7, 0.2, 0.1)
-
+    tr_l, v_l, _ = calc_partition_pos(len(csvs), train_perc, val_size, test_perc)
+    # Create folders 
+    os.mkdir(target_dir  )
+    os.mkdir(target_dir + 'train/')
+    os.mkdir(target_dir + 'val/')
+    os.mkdir(target_dir + 'test/')
     # Write partitions
     csvs.iloc[:tr_l].to_csv(    target_dir + 'train/train_MeanValues.csv', 
                                 header=False, index=False)
@@ -105,13 +110,21 @@ def generate_image_dataset(source_dirs, target_dir, imgs):
     target_dirs = [ target_dir + 'train/',
                     target_dir + 'val/',
                     target_dir + 'test/']
+    # Create directories
+    os.mkdir(target_dir)
+    os.mkdir(target_dirs[0])
+    os.mkdir(target_dirs[1])
+    os.mkdir(target_dirs[2])
 
     # For each list in imgs(train list, val list and test list)
     for i in range(3):
         # Check each source dir
         for sd in source_dirs:
+            # Create directories
+            td = target_dirs[i] + sd.split('/')[-2] + '/'
+            os.mkdir(td)
             # Copy if present and update
-            imgs[i] = copy_if_in_source(sd, target_dirs[i], imgs[i])
+            imgs[i] = copy_if_in_source(sd, td, imgs[i])
 
 
 # Checks that every image in each folder has its counterpart in the csv
@@ -127,9 +140,16 @@ def verify_dataset(image_target, data_target):
     # Check all data is in the imgs
     for i in range(3):
         # Read the csv and get the img names
-        data = merge_csvs(data_targets[i]).iloc[:,0].values
-        # Read the images
-        images = listdir(image_targets[i])
+        df = merge_csvs(data_targets[i])
+        data = df.iloc[:,0].values
+        # Image container
+        images = []
+        print(df.iloc[:,-1].unique())
+        for src in df.iloc[:,-2].unique():
+            # Follow the naming convention
+            src = src.split('_')[0] + "_fused"
+            # Read the images
+            images += os.listdir(image_targets[i] + src)
         for img_data in data:
             # Remove the extension
             img_data = img_data.split('png')[0][:-1]
@@ -140,9 +160,15 @@ def verify_dataset(image_target, data_target):
     # Check all imgs is in the data
     for i in range(3):
         # Read the csv and get the img names
-        data = merge_csvs(data_targets[i]).iloc[:,0].values
-        # Read the images
-        images = select_valid_files(listdir(image_targets[i]))
+        df = merge_csvs(data_targets[i])
+        data = df.iloc[:,0].values
+        # Image container
+        images = []
+        for src in df.iloc[:,-2].unique():
+            # Follow the naming convention
+            src = src.split('_')[0] + "_fused"
+            # Read the images
+            images += os.listdir(image_targets[i] + src)
         for img_images in images:
             # Remove the extension and the _WRef
             img_images = img_images[:-9]
@@ -151,11 +177,12 @@ def verify_dataset(image_target, data_target):
                 print('Los datos de ' + str(i) + ' ' + img_images + ' no está en la carpeta de datos')
 
     
-def generate_definitive_dataset(csv_source, images_source, csv_target, images_target):
+def generate_definitive_dataset(csv_source, images_source, csv_target, images_target,
+                                train_perc, val_size, test_perc):
 
     # First generate the csv dataset
     print('Generating csv dataset..')
-    train, val, test = generate_csv_dataset(csv_source, csv_target)
+    train, val, test = generate_csv_dataset(csv_source, csv_target, train_perc, val_size, test_perc)
     # Then the image dataset
     print('Generating image dataset')
     generate_image_dataset(images_source, images_target, [list(train), list(val), list(test)])
@@ -166,16 +193,17 @@ def generate_definitive_dataset(csv_source, images_source, csv_target, images_ta
 
 if __name__ == "__main__":
 
-    images_source = [   '/home/erick/google_drive/PARMA/SoilColor/Images/o1_fused/',
-                        '/home/erick/google_drive/PARMA/SoilColor/Images/o2_fused/']
+    images_source = ['/home/erick/google_drive/PARMA/SoilColor/Images/o1_fused/',
+                    '/home/erick/google_drive/PARMA/SoilColor/Images/o2_fused/']
 
     csv_source = [  '/home/erick/google_drive/PARMA/SoilColor/Images/o1_marked/',
                     '/home/erick/google_drive/PARMA/SoilColor/Images/o2_marked/']
-    csv_target = '/home/erick/google_drive/PARMA/SoilColor/Images/o_marked_definitive/'
-    images_target = '/home/erick/google_drive/PARMA/SoilColor/Images/o_fused_definitive/'
+    csv_target = '/home/erick/google_drive/PARMA/SoilColor/Images/definitive/o_marked/'
+    images_target = '/home/erick/google_drive/PARMA/SoilColor/Images/definitive/o_fused/'
 
     
+    #generate_csv_dataset(csv_source, csv_target, 0, 0, 1)
 
 
-    generate_definitive_dataset(csv_source, images_source, csv_target, images_target)
+    generate_definitive_dataset(csv_source, images_source, csv_target, images_target, 0.7, 0.2, 0.1)
 
