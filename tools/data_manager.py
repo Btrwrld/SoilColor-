@@ -84,7 +84,9 @@ def load_mean_values(path, file_name):
 
 
 # Takes an order and shuffles a df according to it
-def shuffle_df(df, new_order=[]):
+def shuffle_df(df, new_order=[], seed=0):
+
+    np.random.seed(seed)
 
     if(len(new_order) == 0):
         new_order = np.arange(df.shape[0])
@@ -122,7 +124,7 @@ def get_mean_values_dataset(path, shuffle=True):
     # Get the csv files that contain MeanValues in their name
     mean_values = listdir(path)
     # Select only the csv's called mean vales
-    mean_values = select_valid_files(mean_values, ['MeanValues'], 0)
+    mean_values = select_valid_files(mean_values, ['MeanValues'])
 
     # Start with empty data frames
     data, targets = get_dataframe_skeleton()
@@ -179,9 +181,6 @@ def minmax_normmalization(df, minmax_scaler=None):
 
 
 
-
-
-
 ############################## Image related stuff ##############################
 
 '''
@@ -191,11 +190,10 @@ def minmax_normmalization(df, minmax_scaler=None):
 
     dirty_list:     List with the values we'll check
     valid_ids:      List with the valid identifiers
-    checK_ext:      If 1 checks the extension, if 0 checks the name
 
 
 '''
-def select_valid_files(dirty_list, valid_ids=['png', 'jpg', 'jpeg'], check_ext=1):
+def select_valid_files(dirty_list, valid_ids=['png', 'jpg', 'jpeg']):
 
     # Here we'll store the indexes of the 
     # elements we want to remove
@@ -255,6 +253,7 @@ def select_valid_images(images):
 
     return valid_images
 
+
 #   Image loader function, loads the images in the 
 #   order they are given, can load batches or the whole list.
 #   If no image names are given, the whole folder is explored and 
@@ -305,6 +304,53 @@ def load_images(path, image_names=[], batch_size=-1):
     y = np.array(y)
 
     return x, y
+
+
+def mix_pixel_ref(path, references, targets, image_names=[], size=40):
+
+    if(len(image_names)):
+        # Read all the images on the path 
+        image_names = listdir(path)
+        # Select the valid images
+        image_names = select_valid_images(image_names)
+
+    x, y = get_dataframe_skeleton()
+    
+    for img in range(len(image_names)):
+
+        # Read the image and resize it to 40x40
+        name = image_names.pop(0)
+        image = resize(imread(path + name), (size, size), anti_aliasing=True)
+
+        idx = img * image.shape[0] * image.shape[1]
+        for i in range(image.shape[0]):
+            for j in range(image.shape[1]):
+                # Extract RGB
+                rgb = np.array([image[i, j, 0], image[i, j, 1], image[i, j, 2]])
+                # Concatenate data
+                concat = np.concatenate((rgb, references.iloc[img].values))
+                # Add to the database
+                x.loc[idx + i*image.shape[1] + j] = concat
+                y.loc[idx + i*image.shape[1] + j] = targets.iloc[img].values
+
+
+    return x, y
+
+
+
+
+def get_pixelwise_mean_values(path, image_names=[]):
+    # Load images and csv references
+    csv_values, y = get_mean_values_dataset(path, shuffle=False)
+    # Select only the reference values the csv 
+    names = csv_values.iloc[:, 0]
+    csv_values = csv_values.iloc[:, 3:]
+
+    size = 40
+    # Calcs the pixel wise rgb values and concatenates the reference
+    x, y = mix_pixel_ref(path, csv_values, y, names, size)
+
+    return x, y, size
 
 
 
