@@ -86,7 +86,7 @@ def onclick(event):
         
 
 # Draws the image
-def show_image(image, name):
+def show_image(image, name, isMarkingRT):
 
     # Set up the canvas to dispay and capture clicks
     ax = plt.gca()
@@ -97,8 +97,14 @@ def show_image(image, name):
     # Display the image to preview some values
     plt.show(block=False)
 
-    # Select the color space
-    select_color_space()
+    # If we are just marking rt
+    if(isMarkingRT):
+        # Then we reuse the image name since its just 1 crop
+        input("Press enter when you are ready to start marking ")
+        pending_colors.append('')
+    else:
+        #Select the color space
+        select_color_space()
 
     # Link the click event listener to the function to get the coordinates
     fig.canvas.mpl_connect('button_press_event', onclick)
@@ -120,7 +126,7 @@ def select_color_space():
         
         # Combine the values to generate the pending colors list
         for chroma in chromas[: chromas.index(c) + 1]:
-            pending_colors.append('v' + value + 'c' + chroma)
+            pending_colors.append('_v' + value + 'c' + chroma)
             
 
     print('You can now begin the color capture process!')
@@ -164,7 +170,7 @@ def create_dataset(image, name, save_dir):
         y.append(color_center[color][1])
 
         # Store the color
-        cv2.imwrite(save_dir + name + '_' + color + '.png', color_image)
+        cv2.imwrite(save_dir + name + color + '.png', color_image)
 
     # Save the csv file for the image
     rows = zip(x, y, colors)
@@ -208,7 +214,7 @@ def remove_marked_images(images, marked_images):
 
 
 
-def start(path, save_dir):
+def start(path, save_dir, isMarkingRT=False):
 
     global card_name
 
@@ -237,7 +243,7 @@ def start(path, save_dir):
         # we know the card name always follow the first _
         card_name = im_name.split('_')[1]
         # Make a blocking show that closes the image when we are done marking
-        show_image(image, im_name)
+        show_image(image, im_name, isMarkingRT)
         # Create the gt for the image and reset store data structures
         create_dataset(image, im_name, save_dir)
         # Count the marked image 
@@ -259,8 +265,10 @@ if __name__ == '__main__':
     # Ask for the images path
     path = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_base/'
     save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_big/'
+    # True if we only need to mak 1 element+refs per image also reused name
+    isMarkingRT = True
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)
     # Start generator script
-    start(path, save_dir)
+    start(path, save_dir, isMarkingRT)

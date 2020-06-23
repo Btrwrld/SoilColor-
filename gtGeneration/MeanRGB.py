@@ -11,7 +11,7 @@ def calc_rgb_mean(image):
 
 
 
-def start(path, save_dir):
+def start(path, save_dir, isMarkingRT=False):
 
 
     # Read all the base images available
@@ -58,29 +58,30 @@ def start(path, save_dir):
         G_mean = []
         B_mean = []
 
-        # Go through every target
-        '''for t in range(len(target_images)):
+        # Go through every target if we are marking a card
+        if(not(isMarkingRT)):
+            for t in range(len(target_images)):
 
-            # Get the target name
-            target_name = target_images[t]
+                # Get the target name
+                target_name = target_images[t]
 
-            # Check if the target is part of the 
-            # current image, if so procees it
-            if(image in target_name):
+                # Check if the target is part of the 
+                # current image, if so procees it
+                if(image in target_name):
 
-                # Read the image in BGR
-                target = cv2.imread(save_dir + target_name)
+                    # Read the image in BGR
+                    target = cv2.imread(save_dir + target_name)
 
-                # Add the target name
-                chips.append(target_name)
-                # Get the components mean value
-                mean_values = calc_rgb_mean(target)
-                B_mean.append(mean_values[0])
-                G_mean.append(mean_values[1])
-                R_mean.append(mean_values[2])
+                    # Add the target name
+                    chips.append(target_name)
+                    # Get the components mean value
+                    mean_values = calc_rgb_mean(target)
+                    B_mean.append(mean_values[0])
+                    G_mean.append(mean_values[1])
+                    R_mean.append(mean_values[2])
 
-                # Add the image to the removal list
-                pending_removal.append(t)'''
+                    # Add the image to the removal list
+                    pending_removal.append(t)
 
         # Read the image in BGR
         target = cv2.imread(save_dir + image + '.png')
@@ -125,10 +126,12 @@ if __name__ == '__main__':
     # /home/erick/google_drive/PARMA/SoilColor/Images/outdoor 1/1_GLEY1_R_WBA_M.jpg
     print(10*'-' + 'Welcome to the soil color mean rgb generation tool' + 10*'-')
     # Ask for the images path
-    path = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_small/'
-    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_small/'
+    path = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_big/'
+    save_dir = '/home/erick/google_drive/PARMA/SoilColor/Images/ort_marked_big/'
+    # True if we only need to mak 1 element+refs per image also reused name
+    isMarkingRT = True
     print('USING DEFUALT VALUES OF PATH AND SAVE')
     print('Path: ' + path)
     print('Save: ' + save_dir)
     # Start generator script
-    start(path, save_dir)
+    start(path, save_dir, isMarkingRT)
